@@ -19,7 +19,7 @@ load_dotenv()
 app = FastAPI(title="Farmer AI Assistant API")
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://localhost:5173"],
+    allow_origins=["http://localhost:3000", "http://localhost:5173", "http://localhost:5174", "http://localhost:5175"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -27,7 +27,16 @@ app.add_middleware(
 
 GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
 OPENWEATHER_API_KEY = os.getenv("OPENWEATHER_API_KEY")
-genai.configure(api_key=GOOGLE_API_KEY)
+
+if not GOOGLE_API_KEY or "YOUR_GOOGLE_API_KEY" in GOOGLE_API_KEY:
+    print("WARNING: GOOGLE_API_KEY is missing or invalid. AI features will return mock responses.")
+    GOOGLE_API_KEY = None
+else:
+    genai.configure(api_key=GOOGLE_API_KEY)
+
+if not OPENWEATHER_API_KEY or "YOUR_OPENWEATHER_API_KEY" in OPENWEATHER_API_KEY:
+    print("WARNING: OPENWEATHER_API_KEY is missing. Weather features will return mock data.")
+    OPENWEATHER_API_KEY = None
 
 # The ONLY change is adding Kannada ('kn') to this dictionary.
 LANGUAGE_MAP = {
@@ -60,7 +69,8 @@ def robust_chunk_splitter(text: str, chunk_size: int = 180):
     return [c.strip() for c in chunks if c.strip()]
 
 def get_weather_forecast(lat: str, lon: str):
-    if not OPENWEATHER_API_KEY: return "Weather data is unavailable."
+    if not OPENWEATHER_API_KEY: 
+        return "Simulated Weather: Mostly Sunny, 28°C (API Key Missing)"
     url = f"https://api.openweathermap.org/data/2.5/weather?lat={lat}&lon={lon}&appid={OPENWEATHER_API_KEY}&units=metric"
     try:
         response = requests.get(url); response.raise_for_status(); data = response.json()
@@ -101,46 +111,75 @@ async def predict(
         language_info = LANGUAGE_MAP.get(language, LANGUAGE_MAP["en"])
         language_name = language_info["name"]
         weather_context = get_weather_forecast(lat, lon) if lat and lon else ""
-        model = genai.GenerativeModel("gemini-1.5-flash-latest")
         
-        if file and file.filename and file.size > 0:
-            image_bytes = await file.read()
-            image = Image.open(io.BytesIO(image_bytes))
-            prompt = f"""You are an expert agricultural assistant for Indian farmers.
-            CONTEXT: The user is located where the {weather_context}.
-            USER'S QUESTION: "{text if text else 'Please analyze this image.'}"
-            Analyze the provided image and the user's question. Your tasks: 
-            1. Identify the plant and the disease. 
-            2. Provide a simple explanation. 
-            3. List one organic and one chemical treatment. 
-            IMPORTANT: Your advice MUST consider the weather context. For example, warn against spraying pesticides if rain is expected.
-            Use short, simple sentences and Markdown formatting. Respond ONLY in the {language_name} language."""
-            response = model.generate_content([prompt, image])
+        analysis_text = ""
+        
+        if not GOOGLE_API_KEY:
+            # MOCK RESPONSE FALLBACK
+            import time; time.sleep(2) # Simulate delay
+            analysis_text = f"**[DEMO MODE]**\n\nI can see you're asking about: *{text}*.\n\nSince no Google API Key was provided, I am simulating an intelligent response for you in **{language_name}**.\n\n**Advice:** check your crops for moisture and ensure proper sunlight. (Add a valid key to backend/.env to get real AI responses)."
         else:
-            if not text: return {"analysis": "Please ask a question or upload an image.", "audioContent": None}
-            prompt = f"""You are an expert agricultural assistant for Indian farmers.
-            CONTEXT: The user is located where the {weather_context}.
-            USER'S QUESTION: "{text}"
-            Provide a helpful, concise answer. Your advice MUST consider the weather context. 
-            Use short, simple sentences and Markdown formatting. Respond ONLY in the {language_name} language."""
-            response = model.generate_content(prompt)
+            model = genai.GenerativeModel("gemini-flash-latest")
+            
+            if file and file.filename and file.size > 0:
+                image_bytes = await file.read()
+                image = Image.open(io.BytesIO(image_bytes))
+                prompt = f"""You are an expert agricultural assistant for Indian farmers.
+                CONTEXT: The user is located where the {weather_context}.
+                USER'S QUESTION: "{text if text else 'Please analyze this image.'}"
+                Analyze the provided image and the user's question. Your tasks: 
+                1. Identify the plant and the disease. 
+                2. Provide a simple explanation. 
+                3. List one organic and one chemical treatment. 
+                IMPORTANT: Your advice MUST consider the weather context. For example, warn against spraying pesticides if rain is expected.
+                Use short, simple sentences and Markdown formatting. Respond ONLY in the {language_name} language."""
+                response = model.generate_content([prompt, image])
+            else:
+                if not text: return {"analysis": "Please ask a question or upload an image.", "audioContent": None}
+                prompt = f"""You are an expert agricultural assistant for Indian farmers.
+                CONTEXT: The user is located where the {weather_context}.
+                USER'S QUESTION: "{text}"
+                Provide a helpful, concise answer. Your advice MUST consider the weather context. 
+                Use short, simple sentences and Markdown formatting. Respond ONLY in the {language_name} language."""
+                response = model.generate_content(prompt)
+            
+            analysis_text = response.text
         
-        analysis_text = response.text
-        clean_text = clean_text_for_speech(analysis_text)
-        chunks = robust_chunk_splitter(clean_text)
-        combined_audio = AudioSegment.empty()
-        for chunk in chunks:
-            audio_content = get_tts_audio_from_text(text=chunk, lang_code=language_info["tts_code"])
-            if audio_content:
-                sentence_audio = AudioSegment.from_file(io.BytesIO(audio_content), format="mp3")
-                combined_audio += sentence_audio
-
-        final_audio_file = io.BytesIO()
+        # Audio Processing with Fallback
         audio_base64 = None
-        if len(combined_audio) > 0:
-            combined_audio.export(final_audio_file, format="mp3")
-            final_audio_file.seek(0)
-            audio_base64 = base64.b64encode(final_audio_file.read()).decode("utf-8")
+        try:
+            clean_text = clean_text_for_speech(analysis_text)
+            chunks = robust_chunk_splitter(clean_text)
+            
+            raw_audio_parts = []
+            use_pydub = True
+            combined_audio = AudioSegment.empty()
+
+            for chunk in chunks:
+                audio_content = get_tts_audio_from_text(text=chunk, lang_code=language_info["tts_code"])
+                if audio_content:
+                    raw_audio_parts.append(audio_content)
+                    if use_pydub:
+                        try:
+                            sentence_audio = AudioSegment.from_file(io.BytesIO(audio_content), format="mp3")
+                            combined_audio += sentence_audio
+                        except (FileNotFoundError, OSError, Exception):
+                            print("Warning: ffmpeg not found or pydub error. Switching to raw concatenation.")
+                            use_pydub = False
+
+            if use_pydub and len(combined_audio) > 0:
+                final_audio_file = io.BytesIO()
+                combined_audio.export(final_audio_file, format="mp3")
+                final_audio_file.seek(0)
+                audio_base64 = base64.b64encode(final_audio_file.read()).decode("utf-8")
+            elif raw_audio_parts:
+                # Fallback: Simple dictionary concatenation (works for many MP3 streams)
+                combined_bytes = b"".join(raw_audio_parts)
+                audio_base64 = base64.b64encode(combined_bytes).decode("utf-8")
+
+        except Exception as audio_e:
+            print(f"Audio generation failed completely: {audio_e}")
+            audio_base64 = None
 
         return {"analysis": analysis_text, "audioContent": audio_base64}
 

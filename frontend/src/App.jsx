@@ -4,6 +4,7 @@ import { Routes, Route } from "react-router-dom";
 // We will rename 'Home' to 'ChatPage' and create a new 'LandingPage'
 import ChatPage from "./pages/Home"; // For now, it still points to Home.jsx
 import LandingPage from "./pages/Landing"; // We will create this file next
+import FeaturesPage from "./pages/FeaturesPage";
 
 import { LanguageProvider } from "./context/LanguageContext";
 import { AudioProvider } from "./context/AudioContext";
@@ -20,6 +21,7 @@ export default function App() {
 
           {/* When the URL is '/chat', show the ChatPage (your existing Home component) */}
           <Route path="/chat" element={<ChatPage />} />
+          <Route path="/features" element={<FeaturesPage />} />
         </Routes>
       </LanguageProvider>
     </AudioProvider>

@@ -4,8 +4,8 @@ import { useTranslation } from "react-i18next";
 const LanguageContext = createContext();
 
 export const LanguageProvider = ({ children }) => {
-  const { i18n } = useTranslation();
-  
+  const { t, i18n } = useTranslation();
+
   const [language, setLanguage] = useState(() => {
     const savedLang = localStorage.getItem("agro_lang") || "en";
     return savedLang;
@@ -16,14 +16,16 @@ export const LanguageProvider = ({ children }) => {
     if (i18n.language !== language) {
       i18n.changeLanguage(language);
     }
-  }, [language, i18n]);
+    // Update document title dynamically
+    document.title = `${t("appTitle")} - ${t("appSubtitle")}`;
+  }, [language, i18n, t]);
 
   const value = { language, setLanguage };
 
   return (
     <LanguageContext.Provider value={value}>
       {children}
-    </LanguageContext.Provider> 
+    </LanguageContext.Provider>
   );
 };
 

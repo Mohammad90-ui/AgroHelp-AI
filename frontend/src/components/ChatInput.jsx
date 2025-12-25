@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { Image, Mic, Send, X, Camera } from "lucide-react";
+import { Image, Mic, Send, X, Camera, Paperclip } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useLanguage } from "../context/LanguageContext";
 
@@ -17,16 +17,13 @@ export default function ChatInput({ onSend }) {
     const textarea = textareaRef.current;
     if (textarea) {
       textarea.style.height = "auto";
-      textarea.style.height = `${textarea.scrollHeight}px`;
+      textarea.style.height = `${Math.min(textarea.scrollHeight, 120)}px`;
     }
   }, [text]);
 
-  // This cleanup effect ensures recognition is stopped if the component unmounts
   useEffect(() => {
     return () => {
-      if (recognitionRef.current) {
-        recognitionRef.current.stop();
-      }
+      if (recognitionRef.current) recognitionRef.current.stop();
     };
   }, []);
 
@@ -42,121 +39,136 @@ export default function ChatInput({ onSend }) {
     }
 
     if (listening) {
-      if (recognitionRef.current) {
-        recognitionRef.current.stop();
-      }
+      recognitionRef.current?.stop();
       setListening(false);
       return;
     }
-    
-    const langMap = { 
-      en: "en-IN", 
-      hi: "hi-IN", 
-      te: "te-IN",
-      kn: "kn-IN" 
-    };
-    
+
+    const langMap = { en: "en-IN", hi: "hi-IN", te: "te-IN", kn: "kn-IN" };
     const recognition = new window.webkitSpeechRecognition();
     recognitionRef.current = recognition;
-    
+
     recognition.lang = langMap[language] || 'en-IN';
     recognition.continuous = false;
-    recognition.interimResults = false;
+    recognition.interimResults = true;
 
     recognition.onresult = (event) => {
       const spokenText = event.results[0][0].transcript;
       setText(spokenText);
-      const message = { text: spokenText, image: null };
-      onSend(message);
-      setText("");
+      if (event.results[0].isFinal) {
+        // Optional: auto-send on final result? Maybe better to let user review.
+        // For now, just stop listening.
+        setListening(false);
+      }
     };
 
-    recognition.onerror = (err) => {
-      console.error("Speech recognition error", err);
-    };
-    
-    recognition.onend = () => {
-      setListening(false);
-    };
+    recognition.onerror = (err) => console.error("Speech recognition error", err);
+    recognition.onend = () => setListening(false);
 
     recognition.start();
     setListening(true);
   };
 
   const handleSend = () => {
-    if (!text.trim() && !image) {
-      alert(t("alertNoInput"));
-      return;
-    }
-    const message = { text, image };
-    onSend(message);
+    if (!text.trim() && !image) return;
+    onSend({ text, image });
     setText("");
     setImage(null);
+    if (textareaRef.current) textareaRef.current.style.height = 'auto';
+  };
+
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSend();
+    }
   };
 
   return (
-    <div className="max-w-4xl mx-auto">
-      <div className="grid grid-cols-2 gap-3 mb-3">
-        <button
-          onClick={() => fileInputRef.current?.click()}
-          className="flex flex-col items-center justify-center p-4 bg-white border rounded-2xl shadow-lg hover:bg-green-50 transition-colors"
-        >
-          <Camera size={28} className="text-green-600 mb-1" />
-          <span className="font-semibold text-gray-700">{t("uploadPhoto")}</span>
-        </button>
-        <input
-          type="file"
-          accept="image/*"
-          className="hidden"
-          ref={fileInputRef}
-          onChange={handleImageChange}
-        />
-        <button
-          onClick={handleMicClick}
-          className={`flex flex-col items-center justify-center p-4 bg-white border rounded-2xl shadow-lg hover:bg-green-50 transition-colors ${
-            listening ? "ring-2 ring-red-500" : ""
-          }`}
-        >
-          <Mic size={28} className={`mb-1 ${listening ? "text-red-500" : "text-green-600"}`} />
-          <span className={`font-semibold ${listening ? "text-red-500 animate-pulse" : "text-gray-700"}`}>
-            {listening ? t("listening") : t("askWithVoice")}
-          </span>
-        </button>
-      </div>
-      <div className="relative flex flex-col gap-2">
-        {image && (
-          <div className="relative w-16 h-16 ml-2 mb-2">
-            <img
-              src={URL.createObjectURL(image)}
-              alt="preview"
-              className="w-full h-full rounded-lg object-cover border"
-            />
+    <div className="max-w-4xl mx-auto w-full px-2 md:px-0">
+      {/* Preview Area */}
+      {image && (
+        <div className="mb-2 relative inline-block animate-in fade-in zoom-in duration-200">
+          <div className="relative rounded-2xl overflow-hidden shadow-md border border-gray-100">
+            <img src={URL.createObjectURL(image)} alt="preview" className="h-24 w-auto object-cover bg-gray-100" />
             <button
               onClick={() => setImage(null)}
-              className="absolute -top-2 -right-2 bg-gray-700 text-white rounded-full p-1 hover:bg-red-600"
+              className="absolute top-1 right-1 bg-black/50 hover:bg-red-500 text-white rounded-full p-1 transition-colors backdrop-blur-sm"
             >
               <X size={14} />
             </button>
           </div>
-        )}
-        <div className="flex items-end gap-1 bg-white p-2 border rounded-xl shadow-lg">
+        </div>
+      )}
+
+      {/* Main Input Capsule */}
+      <div className={`
+        relative flex items-end gap-2 bg-white/80 backdrop-blur-xl border border-white/50 shadow-lg rounded-3xl p-2 transition-all duration-300
+        ${listening ? "ring-2 ring-red-400 shadow-red-100" : "focus-within:ring-2 focus-within:ring-green-400 focus-within:shadow-green-100"}
+      `}>
+
+        {/* Left Actions */}
+        <div className="flex items-center gap-1 pb-1 pl-1">
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            className="p-2 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-full transition-colors flex-shrink-0"
+            title={t("uploadPhoto")}
+          >
+            <Camera size={22} />
+          </button>
+          <input type="file" accept="image/*" className="hidden" ref={fileInputRef} onChange={handleImageChange} />
+        </div>
+
+        {/* Text Area */}
+        <div className="flex-1 min-w-0 py-2">
           <textarea
             ref={textareaRef}
-            rows="1"
+            rows={1}
             value={text}
             onChange={(e) => setText(e.target.value)}
-            placeholder={t("chatPlaceholder")}
-            className="flex-1 resize-none border-none focus:ring-0 bg-transparent py-1 px-2 max-h-24 overflow-y-auto placeholder:text-gray-400"
+            onKeyDown={handleKeyDown}
+            placeholder={listening ? "Listening..." : t("chatPlaceholder")}
+            className="w-full bg-transparent border-none p-0 text-gray-800 placeholder:text-gray-400 focus:ring-0 focus:outline-none resize-none max-h-32 text-[16px]"
           />
+        </div>
+
+        {/* Right Actions */}
+        <div className="flex items-center gap-2 pb-1 pr-1">
+          {/* Mic Button */}
+          <button
+            onClick={handleMicClick}
+            className={`
+                p-2 rounded-full transition-all duration-200 flex-shrink-0
+                ${listening ? "bg-red-100 text-red-500 animate-pulse scale-110" : "text-gray-400 hover:text-gray-600 hover:bg-gray-100"}
+                ${text.trim() || image ? "hidden md:block" : ""}
+              `}
+            title={t("askWithVoice")}
+          >
+            <Mic size={22} />
+          </button>
+
+          {/* Send Button */}
           <button
             onClick={handleSend}
-            className="w-10 h-10 flex items-center justify-center rounded-full bg-green-500 text-white hover:bg-green-600 disabled:opacity-50 flex-shrink-0"
             disabled={!text.trim() && !image}
+            className={`
+                p-2 rounded-full transition-all duration-200 flex-shrink-0
+                ${(text.trim() || image)
+                ? "bg-green-600 text-white shadow-md hover:bg-green-700 hover:scale-105 active:scale-95"
+                : "bg-gray-200 text-gray-400 cursor-not-allowed"}
+              `}
+            title="Send"
           >
-            <Send size={20} />
+            <Send size={20} className={text.trim() || image ? "ml-0.5" : ""} />
           </button>
         </div>
       </div>
+
+      {listening && (
+        <div className="text-center text-xs text-red-400 mt-2 font-medium animate-pulse">
+          Listening to your voice... ({language.toUpperCase()})
+        </div>
+      )}
     </div>
   );
 }

@@ -30,35 +30,26 @@ Helping small farmers make informed decisions can:
 
 ## 🎯 Key Features Implemented  
 
-- **Multilingual Chat Assistant**: English, Hindi, Telugu with voice and text support.  
+- **Multilingual Chat Assistant**: English, Hindi, Telugu, and Kannada with voice and text support.  
 - **Accessibility-First Design**: Voice & image-based interactions for low digital literacy users.  
-- **Image Disease Recognition**: Upload plant leaf images to detect crop diseases & get remedies.  
-- **Smart Weather-Aware Advisory**: Context-aware recommendations integrated with OpenWeatherMap API.  
-- **Voice Response System**: Every AI response is read aloud using Text-to-Speech in multiple languages.  
-- **Responsive UI**: Optimized for both desktop and mobile.  
+- **Image Disease Recognition**: Upload plant leaf images to detect crop diseases & get remedies using AI vision analysis.  
+- **Smart Weather-Aware Advisory**: Context-aware recommendations integrated with OpenWeatherMap API for hyper-local forecasts.  
+- **Voice Response System**: Every AI response is read aloud using Text-to-Speech in the user's selected language.  
+- **Chat History**: Automatically saves conversations locally so farmers can refer back to previous advice.
+- **Dynamic Language Switching**: Seamlessly switch languages from the navigation bar.
+- **Dedicated Features Page**: Detailed breakdown of all platform capabilities.
+- **Responsive UI**: Optimized for both desktop and mobile experience with a clean, nature-inspired design.  
 
 ---
 
 ## 🛠 Tech Stack  
 
-**Frontend**: React.js, Tailwind CSS, Web Speech API, Web Audio API  
+**Frontend**: React.js, Tailwind CSS, Framer Motion, Web Speech API, Web Audio API  
 **Backend**: FastAPI (Python)  
-**Database**: PostgreSQL 
+**AI Models**: Google Gemini 1.5 Flash (LLM), Custom Vision Models  
+**APIs**: OpenWeatherMap, Google Generative AI  
 
-**AI/ML & Processing Pipelines**:  
-- Core Frameworks: PyTorch, TensorFlow  
-- Key Architecture: Vision Transformer (ViT)  
-- Image Processing: Laplacian Variance, CLAHE, SRGAN  
-- Audio Processing: Bandpass Filter, Spectral Gating, AGC  
-
-**APIs**:  
-- API for NLU & Translation. 
-- Google STT (Dialect-Aware Speech-to-Text)    
-- Weather & Market Price APIs  
-
-**Deployment & DevOps**: Docker, Kubernetes, GitHub Actions, AWS/GCP  
-
----  
+---
 
 ## 📸 Demo  
 
@@ -106,9 +97,9 @@ Helping small farmers make informed decisions can:
 ## 🚀 Upcoming Features  
 
 - Soil health recommendations & fertilizer guidance.  
-- Weather-based alerts & predictive insights.  
 - Market price tracking & advisory.  
-- Feedback & usage data collection for continuous improvement.  
+- Community forum for peer-to-peer learning.
+- Offline mode for low-connectivity areas.
 
 ---
 
@@ -134,19 +125,55 @@ We are a group of innovators passionate about empowering farmers through technol
 
 ### Backend  
 
-```bash
-python3 -m venv venv
-source venv/bin/activate
-pip install -r requirements.txt
-uvicorn main:app --reload
-```
+1. Navigate to the backend directory:
+   ```bash
+   cd backend
+   ```
+
+2. Create a virtual environment:
+   ```bash
+   # Windows
+   python -m venv venv
+   venv\Scripts\activate
+
+   # Linux/macOS
+   python3 -m venv venv
+   source venv/bin/activate
+   ```
+
+3. Install dependencies:
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+4. Set up Environment Variables:
+   Create a `.env` file in the `backend` directory and add your API keys:
+   ```env
+   GEMINI_API_KEY=your_gemini_api_key
+   OPENWEATHER_API_KEY=your_openweather_api_key
+   ```
+
+5. Run the server:
+   ```bash
+   uvicorn main:app --reload
+   ```
 
 ### Frontend  
 
-```bash
-npm i
-npm run dev
-```
+1. Navigate to the frontend directory:
+   ```bash
+   cd frontend
+   ```
+
+2. Install dependencies:
+   ```bash
+   npm install
+   ```
+
+3. Run the development server:
+   ```bash
+   npm run dev
+   ```
 
 ---
 
