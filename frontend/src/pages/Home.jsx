@@ -103,7 +103,11 @@ export default function Home() {
       catch (e) { console.error("Could not parse coordinates from localStorage:", e); }
     }
     try {
-      const response = await axios.post("http://127.0.0.1:8000/predict", formData);
+      const API_BASE_URL = import.meta.env.VITE_API_URL || "http://127.0.0.1:8000";
+      // Ensure no double slashes if the env var has a trailing slash
+      const apiUrl = `${API_BASE_URL.replace(/\/$/, "")}/predict`;
+
+      const response = await axios.post(apiUrl, formData);
       const aiResponseText = response.data.analysis || response.data.error || "Sorry, I couldn't get a response.";
       const audioContent = response.data.audioContent;
       const aiMessage = { sender: "ai", text: aiResponseText, audio: audioContent ? "data:audio/mp3;base64," + audioContent : null };
