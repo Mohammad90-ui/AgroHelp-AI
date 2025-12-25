@@ -40,9 +40,10 @@ export default function Features() {
               key={i}
               initial={{ opacity: 0, x: i % 2 === 0 ? -50 : 50 }}
               whileInView={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.6, delay: i * 0.1 }}
+              whileHover={{ scale: 1.05 }}
+              transition={{ duration: 0.4 }}
               viewport={{ once: true, margin: "-50px" }}
-              className="group relative p-8 rounded-3xl bg-white/5 border border-white/10 hover:bg-white/10 hover:border-green-500/50 transition-all duration-500 hover:-translate-y-2"
+              className="group relative p-8 rounded-3xl bg-white/5 border border-white/10 hover:bg-white/10 hover:border-green-500/50 transition-all duration-500"
             >
               <div className="absolute top-0 right-0 w-32 h-32 bg-green-500/10 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2 group-hover:bg-green-500/20 transition-all"></div>
 
@@ -56,7 +57,7 @@ export default function Features() {
 
                 <Link
                   to="/features"
-                  className="mt-6 flex items-center text-green-500 font-semibold text-sm opacity-0 group-hover:opacity-100 transform translate-y-2 group-hover:translate-y-0 transition-all duration-300 cursor-pointer"
+                  className="mt-6 flex items-center text-green-500 font-semibold text-sm hover:text-green-400 transition-colors duration-300 cursor-pointer"
                 >
                   {t("learnMore") || "Learn more"} →
                 </Link>

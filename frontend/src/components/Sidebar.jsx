@@ -84,7 +84,7 @@ export default function Sidebar({ isOpen, setIsOpen, chatHistory, onLoadChat, on
 
         <div className="p-4 border-t border-green-100 bg-green-50/50 space-y-2">
           {isExpanded ? (
-            <div className="space-y-3">
+            <div className="space-y-3 mb-4">
               <div className="flex items-center gap-3 text-sm text-gray-600 px-2 cursor-pointer hover:text-green-700 transition-colors">
                 <Settings size={18} /> <span>Settings</span>
               </div>

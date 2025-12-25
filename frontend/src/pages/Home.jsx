@@ -223,12 +223,12 @@ export default function Home() {
               </div>
             )}
 
-            <div ref={messagesEndRef} className="h-2" />
+            <div ref={messagesEndRef} className="h-4" />
           </div>
         </main>
 
         {/* Input Area - Fixed Height */}
-        <div className="flex-none p-4 md:p-6 bg-transparent z-20">
+        <div className="flex-none p-4 md:p-6 pb-8 bg-transparent z-20">
           <div className="max-w-4xl mx-auto">
             <ChatInput onSend={handleSend} />
           </div>
